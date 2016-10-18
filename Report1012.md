@@ -84,4 +84,65 @@ Base::BasePrimitiveやKernelクラスのメソッドに時間をかけている�
 cbench.rb内の```match: ExactMatch.new(message)```がボトルネックになっていると考えられる．
 
 
-[テキスト](http://yasuhito.github.io/trema-book/#_%E7%84%A1%E7%90%86%E3%82%84%E3%82%8A%E9%AB%98%E9%80%9F%E5%8C%96%E3%81%99%E3%82%8B)を参考にし，cbenchプロセスを送り返すFlow Modメッセージを使いまわすことによってcbench.rbの高速化を行った
+[テキスト](http://yasuhito.github.io/trema-book/#_%E7%84%A1%E7%90%86%E3%82%84%E3%82%8A%E9%AB%98%E9%80%9F%E5%8C%96%E3%81%99%E3%82%8B)を参考にし，cbenchプロセスを送り返すFlow Modメッセージを使いまわすことによってcbench.rbの高速化を行った．
+
+cbench.rbを以下の内容に更新し，プロファイルによる解析を再度実行した．
+
+```ruby:cbench.rb
+# A simple openflow controller for benchmarking (fast version).
+class FastCbench < Trema::Controller
+  def start(_args)
+    logger.info "#{name} started."
+  end
+
+  def packet_in(dpid, packet_in)
+    @flow_mod ||= create_flow_mod_binary(packet_in)
+    send_message dpid, @flow_mod
+  end
+
+  private
+
+  def create_flow_mod_binary(packet_in)
+    options = {
+      command: :add,
+      priority: 0,
+      transaction_id: 0,
+      idle_timeout: 0,
+      hard_timeout: 0,
+      buffer_id: packet_in.buffer_id,
+      match: ExactMatch.new(packet_in),
+      actions: SendOutPort.new(packet_in.in_port + 1)
+    }
+    FlowMod.new(options).to_binary.tap do |flow_mod|
+      def flow_mod.to_binary
+        self
+      end
+    end
+  end
+end
+```
+実行結果は以下のようになった
+
+```
+cbench: controller benchmarking tool
+   running in mode 'throughput'
+   connecting to controller at localhost:6653
+   faking 1 switches :: 10 tests each; 10000 ms per test
+   with 100000 unique source MACs per switch
+   starting test with 1000 ms delay after features_reply
+   ignoring first 1 "warmup" and last 0 "cooldown" loops
+   debugging info is off
+1   switches: fmods/sec:  984   total = 0.098276 per ms
+1   switches: fmods/sec:  775   total = 0.077471 per ms
+1   switches: fmods/sec:  593   total = 0.059285 per ms
+1   switches: fmods/sec:  816   total = 0.081598 per ms
+1   switches: fmods/sec:  655   total = 0.065398 per ms
+1   switches: fmods/sec:  554   total = 0.055340 per ms
+1   switches: fmods/sec:  585   total = 0.058483 per ms
+1   switches: fmods/sec:  780   total = 0.077953 per ms
+1   switches: fmods/sec:  634   total = 0.063338 per ms
+1   switches: fmods/sec:  550   total = 0.054909 per ms
+RESULT: 1 switches 9 tests min/max/avg/stdev = 54.91/81.60/65.98/9.79 responses/s
+```
+
+結果部分を比較すると，高速化前は平均9.00 rsponses/sであったcbenchの応答速度が65.98 responses/sになっており，約７倍高速化することを確認した．
