@@ -26,7 +26,28 @@ Cbenchコントローラの動作を解析するので，
 ```
 
 を実行し，結果をテキストファイルとして出力した．
-出力結果は以下のようになった．
+実行結果とプロファイルの出力結果は以下のようになった．
+```
+cbench: controller benchmarking tool
+   running in mode 'throughput'
+   connecting to controller at localhost:6653
+   faking 1 switches :: 10 tests each; 10000 ms per test
+   with 100000 unique source MACs per switch
+   starting test with 1000 ms delay after features_reply
+   ignoring first 1 "warmup" and last 0 "cooldown" loops
+   debugging info is off
+1   switches: fmods/sec:  144   total = 0.014352 per ms
+1   switches: fmods/sec:  111   total = 0.011011 per ms
+1   switches: fmods/sec:  104   total = 0.010339 per ms
+1   switches: fmods/sec:  94   total = 0.009398 per ms
+1   switches: fmods/sec:  79   total = 0.007798 per ms
+1   switches: fmods/sec:  72   total = 0.007182 per ms
+1   switches: fmods/sec:  108   total = 0.010738 per ms
+1   switches: fmods/sec:  92   total = 0.009126 per ms
+1   switches: fmods/sec:  82   total = 0.008150 per ms
+1   switches: fmods/sec:  73   total = 0.007298 per ms
+RESULT: 1 switches 9 tests min/max/avg/stdev = 7.18/11.01/9.00/1.39 responses/s
+```
 
 ```
 Measure Mode: wall_time
@@ -57,3 +78,10 @@ Sort by: self_time
   1.16      1.301     1.301     0.000     0.000   272033   Symbol#to_sym
 
 ```
+
+Base::BasePrimitiveやKernelクラスのメソッドに時間をかけていることが分かった．
+特に値の参照を行うBinData::BasePrimitive#\_valueの実行に多く時間が取られているので，
+cbench.rb内の```match: ExactMatch.new(message)```がボトルネックになっていると考えられる．
+
+
+[テキスト](http://yasuhito.github.io/trema-book/#_%E7%84%A1%E7%90%86%E3%82%84%E3%82%8A%E9%AB%98%E9%80%9F%E5%8C%96%E3%81%99%E3%82%8B)を参考にし，cbenchプロセスを送り返すFlow Modメッセージを使いまわすことによってcbench.rbの高速化を行った
