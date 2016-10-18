@@ -21,13 +21,13 @@
 ruby-profを用いてCbenchのボトルネックを解析した．
 Cbenchコントローラの動作を解析するので，
 
-```
+```実行したコマンド
 ＄ ruby-prof ./bin/trema run ./lib/cbench.rb > output.txt
 ```
 
 を実行し，結果をテキストファイルとして出力した．
 実行結果とプロファイルの出力結果は以下のようになった．
-```
+```出力結果
 cbench: controller benchmarking tool
    running in mode 'throughput'
    connecting to controller at localhost:6653
@@ -49,7 +49,7 @@ cbench: controller benchmarking tool
 RESULT: 1 switches 9 tests min/max/avg/stdev = 7.18/11.01/9.00/1.39 responses/s
 ```
 
-```
+```プロファイルの出力(抜粋)
 Measure Mode: wall_time
 Thread ID: 10766200
 Fiber ID: 10764440
